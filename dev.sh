@@ -13,11 +13,11 @@ python3 -m venv ~/.lightscript-venv
 
 pip3 install --upgrade pip
 
-# install pre-commit, use it Black as in .pre-commit-config.yaml
+# install pre-commit
 pip3 install pre-commit
 pre-commit install
 
 pip3 install -r requirements.txt
-pip install lightctl==0.3.0 --find-links https://s3-us-west-2.amazonaws.com/pypi.lightup.ai/poc/lightctl/index.html
+pip install lightctl==0.9.0 --find-links https://s3-us-west-2.amazonaws.com/pypi.lightup.ai/poc/lightctl/index.html
 
 export PYTHONPATH=$(pwd):$PYTHONPATH
