@@ -1,9 +1,11 @@
 from lightctl.client.profiler_client import ProfilerClient
 
-WORKSPACE_UUID = ""
-SOURCE_UUID = ""
-TABLE_LIST = {"schema": ["list", "of", "tables"]}
-TIMESTAMP_COLUMN_NAME = ""
+WORKSPACE_UUID = "497d2c3e-2e24-47ec-b33a-dcf3999062a7"
+SOURCE_UUID = "dc3693cf-da46-4f99-b79d-f1f98a0242be"
+TABLE_LIST = {"lightup_demo": ["dqfreshness"]}
+TIMESTAMP_COLUMN_NAME = "timestamp"
+PARTITION_COLUMN_NAME = "datehour"
+PARTITION_COLUMN_FORMAT = "%Y/%m/%d/%H"
 
 
 TABLE_PROFILER_CONFIG = {
@@ -13,10 +15,16 @@ TABLE_PROFILER_CONFIG = {
     "tableSchemaChange": {"enabled": False},
     "dataDelay": {"enabled": True},
     "volume": {"enabled": True},
+    "partitions": [
+        {
+            "columnName": PARTITION_COLUMN_NAME,
+            "format": PARTITION_COLUMN_FORMAT,
+            "timezone": "UTC",
+        }
+    ],
 }
 
 pc = ProfilerClient()
-
 
 for schema in TABLE_LIST:
     table_list = TABLE_LIST[schema]
