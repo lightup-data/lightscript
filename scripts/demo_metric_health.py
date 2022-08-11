@@ -1,7 +1,7 @@
 import arrow
 from lightctl.client.incident_client import IncidentClient
 from lightctl.client.metric_client import MetricClient
-from lightctl.client.rule_client import RuleClient
+from lightctl.client.monitor_client import MonitorClient
 
 
 class bcolors:
@@ -41,7 +41,7 @@ def get_metric_tags(metric):
 
 
 mc = MetricClient()
-rc = RuleClient()
+rc = MonitorClient()
 ic = IncidentClient()
 
 # List of metrics to monitor
