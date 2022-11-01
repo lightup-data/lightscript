@@ -19,8 +19,9 @@ from lightctl.client.metric_client import MetricClient
 from lightctl.client.monitor_client import MonitorClient
 
 # update these with the values.
-WORKSPACE_ID = "updateme"
-SCHEMA_NAME = "updateme"
+WORKSPACE_ID = "updateme"  # workspace uuid
+SCHEMA_NAME = "updateme"  # schema name
+DATASOURCE_ID = "updateme"  # datasource uuid
 DRY_RUN = True  # set to False to update configuration
 
 monitor_client = MonitorClient()
@@ -31,7 +32,11 @@ def monitor_str(monitor):
     return f'{monitor["metadata"]["name"]} ({monitor["metadata"]["uuid"]})'
 
 
-def get_volume_monitors_in_workspace_and_schema(workspace_id, schema_name):
+def get_volume_monitors_in_workspace_and_schema(workspace_id, source_uuid, schema_name):
+    assert workspace_id != "updateme"
+    assert source_uuid != "updateme"
+    assert schema_name != "updateme"
+
     monitors = monitor_client.list_monitors(workspace_id)
     metrics = metric_client.list_metrics(workspace_id)
     metric_dict = {}
@@ -42,10 +47,11 @@ def get_volume_monitors_in_workspace_and_schema(workspace_id, schema_name):
         if metric["config"]["table"]["type"] == "customSql":
             continue
 
-        # filter out only volume metrics associated with the schema name
+        # filter out only volume metrics associated with the source and schema name
         if (
             metric["config"]["aggregation"]["type"] == "volume"
             and metric["config"]["table"]["schemaName"] == schema_name
+            and source_uuid in metric["config"]["sources"]
         ):
             metric_uuid = metric["metadata"]["uuid"]
             metric_dict[metric_uuid] = metric
@@ -95,7 +101,7 @@ def update_aggressiveness_retrain_and_enable(monitors):
 
 
 candidate_monitors = get_volume_monitors_in_workspace_and_schema(
-    WORKSPACE_ID, SCHEMA_NAME
+    WORKSPACE_ID, DATASOURCE_ID, SCHEMA_NAME
 )
 
 update_aggressiveness_retrain_and_enable(candidate_monitors)
