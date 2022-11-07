@@ -78,7 +78,12 @@ def update_aggressiveness_retrain_and_enable(monitors):
         ]:
             continue
 
-        if monitor["config"]["symptom"]["aggressiveness"]["level"] != 7:
+        # use auto-discovered symptom if present
+        symptom_config = monitor["status"].get("runtimeConfig", {}).get("symptomConfig")
+        if not symptom_config:
+            symptom_config = monitor["config"]["symptom"]
+
+        if symptom_config["aggressiveness"]["level"] != 7:
             continue
 
         print(f"Updating monitor {monitor_str(monitor)}")
@@ -90,8 +95,9 @@ def update_aggressiveness_retrain_and_enable(monitors):
                 monitor["metadata"]["workspaceId"], monitor["metadata"]["uuid"], monitor
             )
 
-            # update training configuration
-            monitor["config"]["symptom"]["aggressiveness"] = {"level": 3}
+            # update symptom configuration
+            symptom_config["aggressiveness"] = {"level": 3}
+            monitor["config"]["symptom"] = symptom_config
             monitor["config"]["isLive"] = True
             monitor_client.update_monitor(
                 monitor["metadata"]["workspaceId"], monitor["metadata"]["uuid"], monitor
