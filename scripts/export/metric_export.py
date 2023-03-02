@@ -60,7 +60,7 @@ def export_to_csv(workspace_id, metric_map, start_time):
 
 
 def main():
-    start_time = time.time()
+    start_time = export_time = time.time()
 
     for ws in workspaces:
         workspace_id = ws["uuid"]
@@ -107,7 +107,12 @@ def main():
                 }
             )
 
-        export_to_csv(workspace_id, metric_map, int(start_time))
+        export_to_csv(workspace_id, metric_map, int(export_time))
+        print(
+            f"metric export for workspace '{ws['name']}' completed in "
+            f"{time.time()-start_time} seconds."
+        )
+        start_time = time.time()
 
 
 if __name__ == "__main__":
