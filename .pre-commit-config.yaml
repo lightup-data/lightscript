@@ -1,38 +1,6 @@
 repos:
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.3.0
-    hooks:
-      - id: end-of-file-fixer
-      - id: trailing-whitespace
-      - id: check-json
-      - id: pretty-format-json
-        args:
-        - --autofix
-        - --no-sort-keys
-
-  - repo: git@github.com:humitos/mirrors-autoflake.git
-    rev: v1.3
-    hooks:
-      - id: autoflake
-        args: [--in-place,--remove-all-unused-imports,--remove-unused-variable,--ignore-init-module-imports]
-
-  - repo: https://github.com/timothycrosley/isort
-    rev: 5.10.1
-    hooks:
-      - id: isort
-        language_version: python3.8
-        args: [--multi-line=3,--trailing-comma,--force-grid-wrap=0,--use-parentheses,--line-length=88,--ensure-newline-before-comments]
-
-  - repo: https://github.com/ambv/black
-    rev: 22.6.0
-    hooks:
-      - id: black
-        language_version: python3.8
-        args: [--fast]
-repos:
-
-  - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
     hooks:
       - id: end-of-file-fixer
