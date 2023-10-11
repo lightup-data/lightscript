@@ -36,6 +36,7 @@ def export_to_csv(workspace_id, metric_map, start_time):
     csv_file = f"{path}/{workspace_id}.csv"
     csv_columns = [
         "workspaceId",
+        "workspaceName",
         "metricName",
         "metricUuid",
         "metricId",
@@ -100,6 +101,7 @@ def main():
             metric_uuid = metric["metadata"]["uuid"]
             metric_map[metric_uuid] = {
                 "workspaceId": workspace_id,
+                "workspaceName": ws["name"],
                 "metricName": metric["metadata"]["name"],
                 "metricUuid": metric_uuid,
                 "metricId": metric["metadata"]["idSerial"],
