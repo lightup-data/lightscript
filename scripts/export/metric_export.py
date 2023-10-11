@@ -35,13 +35,28 @@ def export_to_csv(workspace_id, metric_map, start_time):
 
     csv_file = f"{path}/{workspace_id}.csv"
     csv_columns = [
-        "name",
-        "uuid",
-        "id",
+        "workspaceId",
+        "metricName",
+        "metricUuid",
+        "metricId",
+        "metricCreationType",
+        "metricDescription",
+        "metricTags",
+        "metricDimension",
+        "metricConfigType",
         "sourceUuid",
         "sourceName",
         "schemaName",
         "tableName",
+        "schemaUuid",
+        "tableUuid",
+        "collectionMode",
+        "columnName",
+        "columnUuid",
+        "metricIsLive",
+        "metricLastSampleTs",
+        "metricConfigUpdatedTs",
+        "metricRunStatus",
         "monitors",
     ]
 
@@ -82,16 +97,43 @@ def main():
             ]:
                 continue
 
-            metric_map[metric["metadata"]["uuid"]] = {
-                "name": metric["metadata"]["name"],
-                "uuid": metric["metadata"]["uuid"],
-                "id": metric["metadata"]["idSerial"],
+            metric_uuid = metric["metadata"]["uuid"]
+            metric_map[metric_uuid] = {
+                "workspaceId": workspace_id,
+                "metricName": metric["metadata"]["name"],
+                "metricUuid": metric_uuid,
+                "metricId": metric["metadata"]["idSerial"],
+                "metricCreationType": metric["metadata"]["creationType"],
+                "metricDescription": metric["metadata"].get("description", ""),
+                "metricTags": metric["metadata"].get("tags", []),
+                "metricConfigType": metric["config"]["configType"],
+                "metricDimension": metric["config"]["dimension"],
                 "sourceUuid": metric["config"]["sources"][0],
                 "sourceName": source_map.get(metric["config"]["sources"][0], ""),
+                "schemaUuid": metric["config"]["table"].get("schemaUuid", ""),
+                "tableUuid": metric["config"]["table"].get("tableUuid", ""),
                 "schemaName": metric["config"]["table"].get("schemaName", ""),
                 "tableName": metric["config"]["table"].get("tableName", ""),
+                "collectionMode": "",
+                "columnName": "",
+                "columnUuid": "",
+                "metricIsLive": metric["config"]["isLive"],
+                "metricLastSampleTs": metric["status"].get("lastSampleTs", ""),
+                "metricConfigUpdatedTs": metric["status"].get("configUpdatedTs"),
+                "metricRunStatus": metric["status"].get("runStatus"),
                 "monitors": [],
             }
+
+            if columns := metric["config"].get("valueColumns"):
+                metric_map[metric_uuid].update(
+                    {
+                        "columnName": columns[0]["columnName"],
+                        "columnUuid": columns[0].get("columnUuid"),
+                    }
+                )
+
+            if collection_mode := metric["config"].get("collectionMode"):
+                metric_map[metric_uuid]["collectionMode"] = collection_mode["type"]
 
         for monitor in monitors:
             metric_uuid = monitor["config"]["metrics"][0]
@@ -102,8 +144,15 @@ def main():
 
             metric_map[metric_uuid]["monitors"].append(
                 {
-                    "name": monitor["metadata"]["name"],
-                    "uuid": monitor["metadata"]["uuid"],
+                    "monitorName": monitor["metadata"]["name"],
+                    "monitorUuid": monitor["metadata"]["uuid"],
+                    "monitorId": monitor["metadata"]["idSerial"],
+                    "monitorTags": monitor["metadata"].get("tags", []),
+                    "monitorIsLive": monitor["config"]["isLive"],
+                    "monitorLiveStartTs": monitor["config"].get("liveStartTs", ""),
+                    "monitorLastSampleTs": monitor["status"].get("lastSampleTs", ""),
+                    "monitorRunStatus": monitor["status"].get("runStatus", ""),
+                    "monitorConfigUpdatedTs": monitor["status"].get("configUpdatedTs"),
                 }
             )
 
