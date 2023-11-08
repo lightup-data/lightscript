@@ -8,7 +8,9 @@ for this repo are met, this script will run.
 Export metrics for each workspace in the following path:
 path/<export_epoch_time>/<workspace_uuid>_datapoints.csv
 
+See usage: python metric_export.py --help
 """
+
 import argparse
 import csv
 import os

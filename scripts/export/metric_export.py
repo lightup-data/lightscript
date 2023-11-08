@@ -7,6 +7,8 @@ the dependencies for this repo are met, this script will run.
 
 Export metrics for each workspace in the following path:
 path/<export_epoch_time>/<workspace_uuid>.csv
+
+See usage: python metric_export.py --help
 """
 
 import argparse
@@ -21,6 +23,7 @@ from lightctl.client.workspace_client import WorkspaceClient
 
 EXPORT_DIRECTORY_PATH = "/tmp/lightupexport/"
 DEBUG = False
+
 
 def dprint(*args):
     if DEBUG:
