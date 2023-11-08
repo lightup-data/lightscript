@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 
 """
-Export metrics on a per workspace basis along with associated metadata incuding
+Export metrics on a per workspace basis along with associated metadata including
 data asset information as well as monitor information. Depends on lightctl, if
 the dependencies for this repo are met, this script will run.
 
 Export metrics for each workspace in the following path:
-path/export_epoch_time/workspace_uuid.csv
-
+path/<export_epoch_time>/<workspace_uuid>.csv
 """
 
+import argparse
 import csv
 import os
 import time
@@ -19,18 +19,20 @@ from lightctl.client.monitor_client import MonitorClient
 from lightctl.client.source_client import SourceClient
 from lightctl.client.workspace_client import WorkspaceClient
 
-source_client = SourceClient()
-metric_client = MetricClient()
-workspace_client = WorkspaceClient()
-monitor_client = MonitorClient()
+EXPORT_DIRECTORY_PATH = "/tmp/lightupexport/"
+DEBUG = False
 
-workspaces = workspace_client.list_workspaces()
-
-# update to appropriate path
-EXPORT_DIRECTORY_PATH = input("Output Path: ") + "/metric_output"
+def dprint(*args):
+    if DEBUG:
+        print(*args)
 
 
-def export_to_csv(workspace_id, metric_map, start_time):
+def export_to_csv(workspace_id: str, metric_map: dict, start_time: int):
+    start_ts = time.time()
+
+    if not metric_map:
+        return
+
     path = EXPORT_DIRECTORY_PATH.rstrip("/") + f"/{start_time}"
 
     csv_file = f"{path}/{workspace_id}.csv"
@@ -74,12 +76,24 @@ def export_to_csv(workspace_id, metric_map, start_time):
         print("I/O error {ex}")
         raise
 
+    dprint(f"write to {csv_file} completed in {time.time() - start_ts} seconds")
+
 
 def main():
-    start_time = export_time = time.time()
+    export_time = time.time()
+
+    workspace_client = WorkspaceClient()
+    source_client = SourceClient()
+    metric_client = MetricClient()
+    monitor_client = MonitorClient()
+
+    workspaces = workspace_client.list_workspaces()
 
     for ws in workspaces:
+        start_time = time.time()
         workspace_id = ws["uuid"]
+        dprint()
+        dprint(f"processing workspace {ws['name']} ({ws['uuid']})")
 
         sources = source_client.list_sources(workspace_id)
         metrics = metric_client.list_metrics(workspace_id)
@@ -159,12 +173,22 @@ def main():
             )
 
         export_to_csv(workspace_id, metric_map, int(export_time))
-        print(
+        dprint(
             f"metric export for workspace '{ws['name']}' completed in "
             f"{time.time()-start_time} seconds."
         )
-        start_time = time.time()
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Export list of configured metrics and associated monitors"
+    )
+    parser.add_argument("--debug", action="store_true", help="Enable debug mode")
+    parser.add_argument("--path", type=str, help="Path to store the csv files")
+
+    args = parser.parse_args()
+
+    DEBUG = args.debug or DEBUG
+    EXPORT_DIRECTORY_PATH = args.path or EXPORT_DIRECTORY_PATH
+
     main()
