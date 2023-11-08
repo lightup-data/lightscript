@@ -27,7 +27,7 @@ monitor_client = MonitorClient()
 workspaces = workspace_client.list_workspaces()
 
 # update to appropriate path
-EXPORT_DIRECTORY_PATH = "/tmp/lightupexport/"
+EXPORT_DIRECTORY_PATH = input("Output Path: ") + "/metric_output"
 
 
 def export_to_csv(workspace_id, metric_map, start_time):
