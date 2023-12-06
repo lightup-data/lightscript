@@ -1,6 +1,6 @@
 # Collibra Integration
 
-Lightup can integrate with Collibra to display data quality indicators inside Collibra’s [governance center](https://www.collibra.com/us/en/products/data-governance).  With the help of this integration, users can retrieve data quality checks from Lightup and display them against any given asset such as a column or a table inside Collibra’s data quality dashboard.
+Lightup can integrate with Collibra to display data quality indicators inside Collibra’s [governance center](https://www.collibra.com/us/en/products/data-governance).  With the help of this integration, users can retrieve data quality checks from Lightup and display them against any given asset such as a table inside Collibra’s data quality dashboard.
 
 Common users of Collibra and Lightup can now see relevant Lightup data quality indicators in Collibra.  With this integration, the following capabilities are unlocked:
 * It is possible to publish a “Lightup Data Quality” score to the Quality section of the Collibra asset pages (table, column or any other asset for which you have specified the relationship between the asset and the data quality metric in Collibra)
@@ -10,6 +10,8 @@ Common users of Collibra and Lightup can now see relevant Lightup data quality i
   * The underlying metric type for the monitor along with a reference to the column asset name if applicable.
   * A count of the number of incidents on this monitor along with a link to the Lightup incidents for further investigation.
   * A health indicator that is either red or green depending on whether a Lightup incident is ongoing  on the asset.
+
+See [blog post](https://lightup.ai/blog/unlocking-a-new-era-of-data-democratization-introducing-lightups-industry-first-integration-with-collibra-for-trusted-data-assets) announcing our integration with Collibra (co-developed with [Xponentl](https://xponentl.ai/))
 
 ## Setup environment and get dependencies installed
 
