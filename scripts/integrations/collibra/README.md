@@ -1,6 +1,6 @@
 # Collibra Integration
 
-Lightup can integrate with Collibra to display data quality indicators inside Collibra’s [governance center](https://www.collibra.com/us/en/products/data-governance).  With the help of this integration, users can retrieve data quality checks from Lightup and display them against any given asset such as a column or a table inside Collibra’s data quality dashboard. 
+Lightup can integrate with Collibra to display data quality indicators inside Collibra’s [governance center](https://www.collibra.com/us/en/products/data-governance).  With the help of this integration, users can retrieve data quality checks from Lightup and display them against any given asset such as a column or a table inside Collibra’s data quality dashboard.
 
 Common users of Collibra and Lightup can now see relevant Lightup data quality indicators in Collibra.  With this integration, the following capabilities are unlocked:
 * It is possible to publish a “Lightup Data Quality” score to the Quality section of the Collibra asset pages (table, column or any other asset for which you have specified the relationship between the asset and the data quality metric in Collibra)
@@ -35,11 +35,13 @@ See .env_sample file in this directory for an example of how to
 setup the .env file. It needs to contain the Collibra username,
 password as well as the URL endpoint.
 
-## Setup the configuration
+## Setup the source map configuration
 
-See `SOURCE_MAP` in `collibra_sync.py` for description of configuration that is
-used by the script to map Collibra sources with Lightup sources within
-workspaces
+In order for Collibra sync to be able to map the appropriate datasources on Lightup onto the datasources on Collibra, the user
+needs to input a map. This map contains the mapping of the datasources within Lightup to the appropriate datasource on Collibra. When there are incidents on a specific table, these will then be mapped on to the Collibra instance.
+
+An example of this map is defined in the `source_map_config.yaml` file that in the same directory. This
+will need to be updated with the configuration on your own instance.
 
 ## Run the integration
 
