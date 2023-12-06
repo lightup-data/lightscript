@@ -18,6 +18,5 @@ pip3 install pre-commit
 pre-commit install
 
 pip3 install -r requirements.txt
-pip install lightctl==1.0.0
 
 export PYTHONPATH=$(pwd):$PYTHONPATH
