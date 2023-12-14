@@ -3,9 +3,9 @@ from datetime import datetime
 from typing import Optional
 from urllib.parse import urlencode
 
-from lightctl.lightup_client import LightupClient
-
+import pandas as pd
 from collibra_api import CollibraAPI
+from lightctl.lightup_client import LightupClient
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +16,7 @@ DOMAIN_TYPE_ID = "00000000-0000-0000-0000-000000030023"
 ASSET_PARENT_ID = "00000000-0000-0000-0000-000000031203"
 ASSET_MAIN_ID = "00000000-0000-0000-0000-000000031000"
 STATUS_ID = "00000000-0000-0000-0000-000000005020"
+TABLE_ASSET_TYPE_ID = "00000000-0000-0000-0000-000000031007"
 
 # Lightup IDs on Collibra created by this script
 LIGHTUP_DOMAIN_ID = "b4316413-0101-0101-0102-dab063b4c111"
@@ -600,8 +601,11 @@ class CollibraSync:
                     "typeId": typeId,
                 }
 
-                asset = self.collibra.post(f"assets", data=payload)
-                get_asset_id = asset["id"]
+                try:
+                    asset = self.collibra.post(f"assets", data=payload)
+                    get_asset_id = asset["id"]
+                except:
+                    continue
 
                 if value["incidentCount"] > 0:
                     if value["ongoingIncidentCount"] == 0:
@@ -653,17 +657,62 @@ class CollibraSync:
                     get_asset_id, "b4316413-0101-0101-0101-dab063b4c109", key[4]
                 )
 
-                # asset_ids.append({
-                #     "asset_id": get_asset_id,
-                #     "database":key[1],
-                #     "schema":key[2],
-                #     "table":key[3],
-                #     "column":key[4]
-                # })
-
-                asset_ids.append(get_asset_id)
+                asset_ids.append(
+                    {
+                        "collibra_asset_id": get_asset_id,
+                        "database_name": key[1],
+                        "schema_name": key[2],
+                        "table_name": key[3],
+                        "column_name": key[4],
+                    }
+                )
 
         return asset_ids
+
+    def collibra_tables(self, source_data, target_data):
+        # Define the source data
+        source_data = source_data
+
+        # Define the target data
+        target_data = target_data
+
+        # Convert the data to DataFrames read as dictionaries
+        source_df = pd.DataFrame(source_data)
+        target_df = pd.DataFrame(target_data)
+
+        # Merge the DataFrames
+        source_df.merge(target_df, on=["table_name", "schema_name"], how="inner")
+
+        # Create an empty list to store the results
+        results = []
+
+        # Loop through the target data
+        for index, row in target_df.iterrows():
+            # Get the table_id and table_name
+            table_id = row["table_id"]
+            table_name = row["table_name"]
+            schema_name = row["schema_name"]
+
+            # Filter the source data for matching tables
+            filtered_source_df = source_df[
+                (source_df["table_name"] == table_name)
+                & (source_df["schema_name"] == schema_name)
+            ]
+
+            # Convert the filtered source data to a dictionary
+            sources = filtered_source_df.to_dict(orient="records")
+
+            # Append the result to the results list
+            results.append(
+                {
+                    "colibra_table_id": table_id,
+                    "colibra_table_name": table_name,
+                    "colibra_schema_name": schema_name,
+                    "metrics_sources": sources,
+                }
+            )
+
+        return results
 
     def run(self):
         # for collibra source id in the mapping run the sync for each source id
@@ -672,19 +721,40 @@ class CollibraSync:
             collibra_source = cs["collibra_source_id"]
 
             # get all assets id created by update_collibra function
-            merged_list = []
+            metrics_list = []
 
-            # get all assets with the same target id and relation type id
             response = self.collibra.get(
-                f"relations?targetId={collibra_source}&relationTypeId={RELATION_TYPE_ID}"
+                f"assets?typeId={TABLE_ASSET_TYPE_ID}&domainId={collibra_source}"
             )
 
-            if response and response["total"] > 0:
-                # delete all assets with the same target id and relation type id
-                for r in response["results"]:
-                    self.collibra.delete(f"assets/{r['source']['id']}")
-            else:
-                print("No assets found")
+            collibra_tables_list = []
+
+            for a in response["results"]:
+                # breadcrumb = self.collibra.get(f"assets/{a['id']}/breadcrumb")
+                # breadcrumb = ' > '.join(d['name'] for d in breadcrumb)
+                # print(f"{breadcrumb} > {a['name']}")
+                # print(a['id'], a['name'], a['domain']['id'], a['domain']['name'].lower())
+
+                # get all assets with the same target id and relation type id
+                response = self.collibra.get(
+                    f"relations?targetId={a['id']}&relationTypeId={RELATION_TYPE_ID}"
+                )
+
+                if response and response["total"] > 0:
+                    # delete all assets with the same target id and relation type id
+                    for r in response["results"]:
+                        self.collibra.delete(f"assets/{r['source']['id']}")
+                else:
+                    print("No assets found")
+
+                collibra_tables_list.append(
+                    {
+                        "table_id": a["id"],
+                        "table_name": a["name"],
+                        "schema_id": a["domain"]["id"],
+                        "schema_name": a["domain"]["name"].lower(),
+                    }
+                )
 
             for ls in cs["lightup_sources"]:
                 workspace_id = ls["workspace_id"]
@@ -695,16 +765,26 @@ class CollibraSync:
                 collibra_ids = self.update_collibra(object_key_to_table_info_map)
 
                 # merge all assets id created by update_collibra function
-                merged_list.extend(collibra_ids)
+                metrics_list.extend(collibra_ids)
 
-            # create relation between collibra source and all assets id created by update_collibra function
-            payload = {
-                "typeId": RELATION_TYPE_ID,
-                "relatedAssetIds": merged_list,
-                "relationDirection": "TO_SOURCE",
-            }
+            tables = self.collibra_tables(metrics_list, collibra_tables_list)
 
-            # update relation between collibra source and all assets id created by update_collibra function
-            data_asset = collibra_source
-            self.collibra.put(f"assets/{data_asset}/relations", data=payload)
-            logger.info("Updated all Lightup Collibra objects")
+            for table in tables:
+                ids = []
+
+                colibra_table_id = table["colibra_table_id"]
+                metrics_sources = table["metrics_sources"]
+                for metric in metrics_sources:
+                    collibra_asset_id = metric["collibra_asset_id"]
+                    ids.append(collibra_asset_id)
+
+                # create relation between collibra source and all assets id created by update_collibra function
+                payload = {
+                    "typeId": RELATION_TYPE_ID,
+                    "relatedAssetIds": ids,
+                    "relationDirection": "TO_SOURCE",
+                }
+
+                # update relation between collibra source and all assets id created by update_collibra function
+                self.collibra.put(f"assets/{colibra_table_id}/relations", data=payload)
+                logger.info("Updated all Lightup Collibra objects")
