@@ -1,6 +1,7 @@
 import logging
 import os
 from typing import Any, Optional
+from urllib.parse import urlencode
 from uuid import UUID
 
 from api_handler import LightupAPIHandler
@@ -55,7 +56,8 @@ class MigrationHandler:
         source_filters: ResourceFilter,
         target_override_fields: dict[str, Any],
     ):
-        data = self.source_handler.list(entity_type, self.source_query_params)
+        query_string = urlencode(self.source_query_params)
+        data = self.source_handler.list(entity_type, query_string)
 
         logging.info(f"Found {len(data)} entities")
         filtered_data = self._apply_filters(
@@ -124,6 +126,17 @@ class MigrationHandler:
             for column in entity["config"]["valueColumns"]:
                 column.pop("columnUuid", None)
 
+        for table in [
+            entity["config"].get("sourceTable", None),
+            entity["config"].get("targetTable", None),
+        ]:
+            if table is None:
+                continue
+            if "table" in table:
+                table["table"].pop("schemaUuid", None)
+                table["table"].pop("tableUuid", None)
+                table["table"].pop("columnUuid", None)
+
         return entity
 
     def _validate_entity(self, entity_type: EntityType, entity: dict[str, Any]) -> bool:
@@ -138,6 +151,10 @@ class MigrationHandler:
                 "Aggregation Compare Metrics are not supported for migration."
             )
             return False
+
+        import json
+
+        print(json.dumps(entity))
 
         source_ids = config.get("sources", [])
         target_source_ids = []
@@ -294,7 +311,7 @@ class MigrationHandler:
     def _get_target_source(self, source_id: UUID) -> Optional[str]:
         source = self.source_handler.get(EntityType.SOURCES, source_id)
         source_name = source.get("metadata", {}).get("name", "")
-        target_sources = self.target_handler.list(EntityType.SOURCES, {})
+        target_sources = self.target_handler.list(EntityType.SOURCES, "")
         matching_sources = [
             source
             for source in target_sources

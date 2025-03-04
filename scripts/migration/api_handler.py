@@ -3,7 +3,6 @@ import logging
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal, Optional, overload
-from urllib.parse import urlencode
 from uuid import UUID
 
 from lightctl.client.base_client import BaseClient
@@ -111,11 +110,10 @@ class LightupAPIHandler:
         else:
             raise LightupException(f"Unsupported entity type {entity_type.name}")
 
-    def list(
-        self, entity_type: EntityType, query_params: dict[str, Any]
-    ) -> list[dict[str, Any]]:
+    @lru_cache
+    def list(self, entity_type: EntityType, query_string: str) -> list[dict[str, Any]]:
         logging.info(
-            f"Fetching data for entity type: {entity_type.name} with query params: {query_params}"
+            f"Fetching data for entity type: {entity_type.name} with query string: {query_string}"
         )
         if entity_type == EntityType.METRICS:
             client = self._get_client(EntityType.METRICS)
@@ -129,7 +127,6 @@ class LightupAPIHandler:
         else:
             raise LightupException(f"Unsupported entity type {entity_type}")
 
-        query_string = urlencode(query_params)
         url_with_query_params = f"{url}?{query_string}"
 
         return client.get(url_with_query_params)  # type: ignore
