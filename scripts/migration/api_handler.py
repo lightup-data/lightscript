@@ -13,13 +13,14 @@ from lightctl.client.source_client import SourceClient
 from lightctl.client.workspace_client import WorkspaceClient
 from lightctl.util import LightupException
 from models import EntityType
+from utils import get_entity_name
 
 CLIENT_TYPE_MAP: dict[EntityType, type[BaseClient]] = {
-    EntityType.METRICS: MetricClient,
-    EntityType.MONITORS: MonitorClient,
-    EntityType.WORKSPACES: WorkspaceClient,
-    EntityType.SOURCES: SourceClient,
-    EntityType.PROFILES: ProfilerClient,
+    EntityType.METRIC: MetricClient,
+    EntityType.MONITOR: MonitorClient,
+    EntityType.WORKSPACE: WorkspaceClient,
+    EntityType.SOURCE: SourceClient,
+    EntityType.PROFILE: ProfilerClient,
 }
 
 
@@ -57,25 +58,25 @@ class LightupAPIHandler:
         self.workspace_id = workspace_id
 
     @overload
-    def _get_client(self, entity_type: Literal[EntityType.METRICS]) -> MetricClient:
+    def _get_client(self, entity_type: Literal[EntityType.METRIC]) -> MetricClient:
         ...
 
     @overload
-    def _get_client(self, entity_type: Literal[EntityType.MONITORS]) -> MonitorClient:
+    def _get_client(self, entity_type: Literal[EntityType.MONITOR]) -> MonitorClient:
         ...
 
     @overload
     def _get_client(
-        self, entity_type: Literal[EntityType.WORKSPACES]
+        self, entity_type: Literal[EntityType.WORKSPACE]
     ) -> WorkspaceClient:
         ...
 
     @overload
-    def _get_client(self, entity_type: Literal[EntityType.SOURCES]) -> SourceClient:
+    def _get_client(self, entity_type: Literal[EntityType.SOURCE]) -> SourceClient:
         ...
 
     @overload
-    def _get_client(self, entity_type: Literal[EntityType.PROFILES]) -> ProfilerClient:
+    def _get_client(self, entity_type: Literal[EntityType.PROFILE]) -> ProfilerClient:
         ...
 
     def _get_client(self, entity_type: EntityType) -> BaseClient:
@@ -84,7 +85,7 @@ class LightupAPIHandler:
     @lru_cache(maxsize=2)
     def _get_workspace_id(self, workspace_name: str) -> Optional[str]:
         logging.info(f"Fetching workspaces with name {workspace_name}")
-        workspaces_client = self._get_client(EntityType.WORKSPACES)
+        workspaces_client = self._get_client(EntityType.WORKSPACE)
         workspaces = workspaces_client.list_workspaces()
         for workspace in workspaces:
             if workspace["name"] == workspace_name:
@@ -98,14 +99,14 @@ class LightupAPIHandler:
     @lru_cache
     def get(self, entity_type: EntityType, id: UUID) -> dict[str, Any]:
         logging.info(f"Fetching data for entity type: {entity_type.name} with id: {id}")
-        if entity_type == EntityType.METRICS:
-            client = self._get_client(EntityType.METRICS)
+        if entity_type == EntityType.METRIC:
+            client = self._get_client(EntityType.METRIC)
             return client.get_metric(self.workspace_id, id)
-        elif entity_type == EntityType.MONITORS:
-            client = self._get_client(EntityType.MONITORS)
+        elif entity_type == EntityType.MONITOR:
+            client = self._get_client(EntityType.MONITOR)
             return client.get_monitor(self.workspace_id, id)
-        elif entity_type == EntityType.SOURCES:
-            client = self._get_client(EntityType.SOURCES)
+        elif entity_type == EntityType.SOURCE:
+            client = self._get_client(EntityType.SOURCE)
             return client.get_source(self.workspace_id, id)
         else:
             raise LightupException(f"Unsupported entity type {entity_type.name}")
@@ -115,14 +116,14 @@ class LightupAPIHandler:
         logging.info(
             f"Fetching data for entity type: {entity_type.name} with query string: {query_string}"
         )
-        if entity_type == EntityType.METRICS:
-            client = self._get_client(EntityType.METRICS)
+        if entity_type == EntityType.METRIC:
+            client = self._get_client(EntityType.METRIC)
             url = client.metrics_url(self.workspace_id)
-        elif entity_type == EntityType.MONITORS:
-            client = self._get_client(EntityType.MONITORS)
+        elif entity_type == EntityType.MONITOR:
+            client = self._get_client(EntityType.MONITOR)
             url = client.monitors_url(self.workspace_id)
-        elif entity_type == EntityType.SOURCES:
-            client = self._get_client(EntityType.SOURCES)
+        elif entity_type == EntityType.SOURCE:
+            client = self._get_client(EntityType.SOURCE)
             url = client.sources_url(self.workspace_id)
         else:
             raise LightupException(f"Unsupported entity type {entity_type}")
@@ -133,13 +134,13 @@ class LightupAPIHandler:
 
     def post(self, entity_type: EntityType, data: dict[str, Any]) -> None:
         logging.info(
-            f"Posting data for entity type: {entity_type.name} with name {data.get('metadata', {}).get('name', '')}"
+            f"Posting data for entity type: {entity_type.name} with name {get_entity_name(data)}"
         )
-        if entity_type == EntityType.METRICS:
-            client = self._get_client(EntityType.METRICS)
+        if entity_type == EntityType.METRIC:
+            client = self._get_client(EntityType.METRIC)
             client.create_metric(self.workspace_id, data)
-        elif entity_type == EntityType.MONITORS:
-            client = self._get_client(EntityType.MONITORS)
+        elif entity_type == EntityType.MONITOR:
+            client = self._get_client(EntityType.MONITOR)
             client.create_monitor(self.workspace_id, data)
         else:
             raise LightupException(f"Unsupported entity type {entity_type.name}")
@@ -147,7 +148,7 @@ class LightupAPIHandler:
     @lru_cache
     def get_source_tree(self, source_id: UUID) -> dict[str, Any]:
         logging.info(f"Fetching source tree with source ID: {source_id}")
-        client = self._get_client(EntityType.PROFILES)
+        client = self._get_client(EntityType.PROFILE)
         url = client.profiler_base_url(self.workspace_id, source_id)
         tree = client.get(f"{url}tree")
         return tree

@@ -7,11 +7,11 @@ from pydantic import BaseModel, Field
 
 
 class EntityType(str, Enum):
-    METRICS = "metrics"
-    MONITORS = "monitors"
-    WORKSPACES = "workspaces"
-    SOURCES = "sources"
-    PROFILES = "profiles"
+    METRIC = "metric"
+    MONITOR = "monitor"
+    WORKSPACE = "workspace"
+    SOURCE = "source"
+    PROFILE = "profile"
 
 
 class ResourceFilter(BaseModel):

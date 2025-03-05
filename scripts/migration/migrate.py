@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from typing import Any, Optional
@@ -6,7 +7,7 @@ from uuid import UUID
 
 from api_handler import LightupAPIHandler
 from models import Config, EntityType, ResourceFilter
-from utils import matches_patterns, setup_logging, update_nested_dict
+from utils import get_entity_name, matches_patterns, setup_logging, update_nested_dict
 
 
 class MigrationHandler:
@@ -59,29 +60,30 @@ class MigrationHandler:
         query_string = urlencode(self.source_query_params)
         data = self.source_handler.list(entity_type, query_string)
 
-        logging.info(f"Found {len(data)} entities")
+        logging.info(f"Found {len(data)} {entity_type.name} entities")
         filtered_data = self._apply_filters(
             data, source_filters.include, source_filters.exclude
         )
 
-        logging.info("Removing system generated/ read-only fields.")
+        logging.info(
+            f"Removing system generated/ read-only fields for {entity_type.name} entities"
+        )
         cleaned_data = [
             self._drop_system_fields(entity_type, entity) for entity in filtered_data
         ]
 
-        logging.info(f"Validating {len(cleaned_data)} entities")
-        validated_data = [
-            entity
-            for entity in cleaned_data
-            if self._validate_entity(entity_type, entity)
-        ]
+        logging.info(f"Validating {len(cleaned_data)} {entity_type.name} entities")
+        validated_data = []
+        for entity in cleaned_data:
+            if self._validate_entity(entity_type, entity):
+                validated_data.append(entity)
+            else:
+                logging.debug(f"Validation failed for entity {json.dumps(entity)}")
 
-        logging.info(f"Creating {len(validated_data)} entities")
+        logging.info(f"Creating {len(validated_data)} {entity_type.name} entities")
         for entity in validated_data:
             update_nested_dict(entity, target_override_fields)
-            logging.info(
-                f"Creating {entity_type.name} : {entity.get('metadata', {}).get('name', '')}"
-            )
+            logging.info(f"Creating {entity_type.name} : {get_entity_name(entity)}")
             if not self.dry_run:
                 self.target_handler.post(entity_type, entity)
 
@@ -140,7 +142,7 @@ class MigrationHandler:
         return entity
 
     def _validate_entity(self, entity_type: EntityType, entity: dict[str, Any]) -> bool:
-        entity_name = entity.get("metadata", {}).get("name", "")
+        entity_name = get_entity_name(entity)
         logging.info(
             f"Validating Fully Qualified Name in target workspace for {entity_type.name} : {entity_name}"
         )
@@ -148,18 +150,14 @@ class MigrationHandler:
 
         if "compares" in config and config["compares"]:
             logging.warning(
-                "Aggregation Compare Metrics are not supported for migration."
+                f"Aggregation Compare Metrics are not supported for migration. Metric: {entity_name}"
             )
             return False
-
-        import json
-
-        print(json.dumps(entity))
 
         source_ids = config.get("sources", [])
         target_source_ids = []
         for source_id in source_ids:
-            target_source_id = self._get_target_source(source_id)
+            target_source_id = self._get_target_source(source_id, entity_name)
             if target_source_id is None:
                 return False
             target_source_ids.append(target_source_id)
@@ -186,15 +184,19 @@ class MigrationHandler:
                 )
             if "sliceByColumns" in config and config["sliceByColumns"]:
                 columns_to_validate.extend(config["sliceByColumns"])
-            if "timestampColumn" in config and config["timestampColumn"]:
-                columns_to_validate.append(config["timestampColumn"])
+            # if "timestampColumn" in config and config["timestampColumn"]:
+            #     columns_to_validate.append(config["timestampColumn"])
             if "partitions" in config and config["partitions"]:
                 columns_to_validate.extend(
                     [column["columnName"] for column in config["partitions"]]
                 )
 
         is_valid_tree = self._validate_tree(
-            target_tree, schema_to_validate, table_to_validate, columns_to_validate
+            target_tree,
+            schema_to_validate,
+            table_to_validate,
+            columns_to_validate,
+            entity_name,
         )
         if not is_valid_tree:
             return False
@@ -203,7 +205,7 @@ class MigrationHandler:
             if table is None:
                 continue
             source_id = table["sourceUuid"]
-            target_source_id = self._get_target_source(source_id)
+            target_source_id = self._get_target_source(source_id, entity_name)
             if target_source_id is None:
                 return False
             table["sourceUuid"] = target_source_id
@@ -227,15 +229,19 @@ class MigrationHandler:
                 columns_to_validate.extend(config["sliceByColumns"])
             if "attributeColumns" in config and config["attributeColumns"]:
                 columns_to_validate.extend(config["attributeColumns"])
-            if "timestampColumn" in config and config["timestampColumn"]:
-                columns_to_validate.append(config["timestampColumn"])
+            # if "timestampColumn" in config and config["timestampColumn"]:
+            #     columns_to_validate.append(config["timestampColumn"])
             if "partitions" in config and config["partitions"]:
                 columns_to_validate.extend(
                     [column["columnName"] for column in config["partitions"]]
                 )
 
             is_valid_tree = self._validate_tree(
-                target_tree, schema_to_validate, table_to_validate, columns_to_validate
+                target_tree,
+                schema_to_validate,
+                table_to_validate,
+                columns_to_validate,
+                entity_name,
             )
             if not is_valid_tree:
                 return False
@@ -249,6 +255,7 @@ class MigrationHandler:
         schema_name: Optional[str],
         table_name: Optional[str],
         column_names: list[str],
+        entity_name: str,
     ) -> bool:
         if schema_name is not None:
             matching_schemas = [
@@ -257,11 +264,13 @@ class MigrationHandler:
                 if schema["name"] == schema_name
             ]
             if len(matching_schemas) == 0:
-                logging.warning(f"Schema {schema_name} not found in target workspace.")
+                logging.warning(
+                    f"Schema {schema_name} not found in target workspace for entity {entity_name}"
+                )
                 return False
             if len(matching_schemas) > 1:
                 logging.warning(
-                    f"Multiple schemas with name {schema_name} found in target workspace."
+                    f"Multiple schemas with name {schema_name} found in target workspace for entity {entity_name}"
                 )
                 return False
         else:
@@ -275,11 +284,13 @@ class MigrationHandler:
                     [tbl for tbl in schema["tables"] if tbl["tableName"] == table_name]
                 )
             if len(matching_tables) == 0:
-                logging.warning(f"Table {table_name} not found in target workspace.")
+                logging.warning(
+                    f"Table {table_name} not found in target workspace for entity {entity_name}"
+                )
                 return False
             if len(matching_tables) > 1:
                 logging.warning(
-                    f"Multiple tables with name {table_name} found in target workspace."
+                    f"Multiple tables with name {table_name} found in target workspace for entity {entity_name}"
                 )
                 return False
         else:
@@ -298,31 +309,35 @@ class MigrationHandler:
                     ]
                 )
             if len(matching_columns) == 0:
-                logging.warning(f"Column {column_name} not found in target workspace.")
+                logging.warning(
+                    f"Column {column_name} not found in target workspace for entity {entity_name}"
+                )
                 return False
             if len(matching_columns) > 1:
                 logging.warning(
-                    f"Multiple columns with name {column_name} found in target workspace."
+                    f"Multiple columns with name {column_name} found in target workspace for entity {entity_name}"
                 )
                 return False
 
         return True
 
-    def _get_target_source(self, source_id: UUID) -> Optional[str]:
-        source = self.source_handler.get(EntityType.SOURCES, source_id)
+    def _get_target_source(self, source_id: UUID, entity_name: str) -> Optional[str]:
+        source = self.source_handler.get(EntityType.SOURCE, source_id)
         source_name = source.get("metadata", {}).get("name", "")
-        target_sources = self.target_handler.list(EntityType.SOURCES, "")
+        target_sources = self.target_handler.list(EntityType.SOURCE, "")
         matching_sources = [
             source
             for source in target_sources
             if source.get("metadata", {}).get("name", "") == source_name
         ]
         if len(matching_sources) == 0:
-            logging.warning(f"Source {source_name} not found in target workspace.")
+            logging.warning(
+                f"Source {source_name} not found in target workspace for entity {entity_name}"
+            )
             return None
         if len(matching_sources) > 1:
             logging.warning(
-                f"Multiple sources with name {source_name} found in target workspace."
+                f"Multiple sources with name {source_name} found in target workspace for entity {entity_name}"
             )
             return None
         return matching_sources[0].get("metadata", {}).get("uuid", "")

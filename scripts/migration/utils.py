@@ -7,7 +7,7 @@ def setup_logging(log_file: str, log_level: str):
     logging.basicConfig(
         filename=log_file,
         level=getattr(logging, log_level.upper()),
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        format="%(asctime)s - %(levelname)s - %(message)s",
     )
 
 
@@ -21,3 +21,7 @@ def update_nested_dict(original: dict[str, Any], updates: dict[str, Any]) -> Non
             update_nested_dict(original[key], value)
         else:
             original[key] = value
+
+
+def get_entity_name(entity: dict[str, Any]):
+    return entity.get("metadata", {}).get("name", "")

@@ -3,19 +3,20 @@
     "credentials_file": "/Users/amanchandra/.lightup/credential",
     "workspace": "base11",
     "entity_types": [
-      "metrics"
+      "metric"
     ],
     "query_params": {
-      "type": "custom"
+      "type": "custom",
+      "is_live": true
     },
     "resource_filters": {
-      "metrics": {
+      "metric": {
         "include": [
           ".*"
         ],
         "exclude": []
       },
-      "monitors": {
+      "monitor": {
         "include": [
           "^prod_.*"
         ],
@@ -29,12 +30,12 @@
     "credentials_file": "/Users/amanchandra/.lightup/credential",
     "workspace": "base11",
     "override_fields": {
-      "metrics": {
+      "metric": {
         "config": {
           "isLive": false
         }
       },
-      "monitors": {
+      "monitor": {
         "config": {
           "isLive": false
         }
@@ -43,7 +44,7 @@
   },
   "migration_settings": {
     "dry_run": true,
-    "concurrency": 10,
+    "concurrency": 50,
     "batch_size": 100,
     "retry_policy": {
       "max_retries": 3,
