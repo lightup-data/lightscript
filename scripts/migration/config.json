@@ -1,0 +1,59 @@
+{
+  "source": {
+    "credentials_file": "/Users/amanchandra/.lightup/credential",
+    "workspace": "base11",
+    "entity_types": [
+      "metric"
+    ],
+    "query_params": {
+      "type": "custom",
+      "is_live": true
+    },
+    "resource_filters": {
+      "metric": {
+        "include": [
+          ".*"
+        ],
+        "exclude": []
+      },
+      "monitor": {
+        "include": [
+          "^prod_.*"
+        ],
+        "exclude": [
+          "^test_.*"
+        ]
+      }
+    }
+  },
+  "target": {
+    "credentials_file": "/Users/amanchandra/.lightup/credential",
+    "workspace": "base11",
+    "override_fields": {
+      "metric": {
+        "config": {
+          "isLive": false
+        }
+      },
+      "monitor": {
+        "config": {
+          "isLive": false
+        }
+      }
+    }
+  },
+  "migration_settings": {
+    "dry_run": true,
+    "concurrency": 50,
+    "batch_size": 100,
+    "retry_policy": {
+      "max_retries": 3,
+      "retry_delay_seconds": 5
+    },
+    "logging": {
+      "enabled": true,
+      "log_level": "debug",
+      "log_file": "migration.log"
+    }
+  }
+}
